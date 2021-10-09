@@ -4,7 +4,8 @@ import argparse  # argparse will be used for parsing the arguments.
 import sys  # for exiting the program if there's an error on the options.
 import os  # for determining permissions on linux.
 import ctypes  # for determining permissions on windows.
-import concurrent.futures  # for faster runtimes.
+import concurrent.futures as futures  # for threading the scanner runtimes.
+import multiprocessing  # for bypassing the GIL.
 import itertools  # for easier ip generation.
 
 # argument parsing.
@@ -15,15 +16,17 @@ argumentParser.add_argument("target", metavar="target", help="the network interf
 argumentParser.add_argument("--use_ip", help="specifies to the target that an ip will be used", action="store_true")
 argumentParser.add_argument("--timeout", metavar="seconds", help="scan response timeout, defaults to 2 seconds",
                             default=2, type=int)
-argumentParser.add_argument("--threads", metavar="threads", help="how many threads run, defaults to 256", default=256,
-                            type=int)
+argumentParser.add_argument("--process_threads", metavar="process_threads", type=int, default=256,
+                            help="how many threads run in each processs, defaults to 256")
+argumentParser.add_argument("--process_num", metavar="process_number", type=int, default=20,
+                            help="how many process run, defaults to 20")
 argumentParser.add_argument("--subnets", metavar="levels", help="how many subnet levels scan, defaults to one",
                             default=1, type=int)
 
 arguments = argumentParser.parse_args()  # parse and store all arguments into this variable.
 
 
-# function declaration.
+# functions declarations. Keep reading the code past this area and come back when a function is used
 
 def is_admin():
     # tries getting the uid for linux. If it doesnt work, it will try checking for windows using ctypes.
@@ -35,16 +38,36 @@ def is_admin():
 
 
 def scan_ip(target):
-    # check if element exists(successful answer), if it does, return true to the filter function.
-    result = arping(target, timeout=arguments.timeout, verbose=0)
-    # safely check index using slicing.
-    if not result[0:1][0:1]:
-        return False
+    # check if result[0][0] exists(successful answer), if it does, return the target ip.
+    # if we are using an ip, we dont know which interface specify to arping.
+    if arguments.use_ip:
+        result = arping(target, timeout=arguments.timeout, verbose=0)
+    # if we are using an interface, then we specify it.
     else:
-        return True
+        result = arping(target, timeout=arguments.timeout, verbose=0, iface=arguments.target)
+    # check if element exists in the result using try-catch.
+    try:
+        var = result[0][0]  # tries to get the element.
+        return target  # returns the ip.
+    except IndexError:
+        pass  # doesnt do anything if there's an error.
 
+
+def generate_ip(octets):
+    # add a dot after every octet except at the end which will be added as is
+    octets_formatted = [x + "." for x in octets[:-1]] + list(octets[-1])
+    return ipTemplate + "".join(octets_formatted)  # join the list to the template and return it.
+
+
+def scanner_process(ip_list):
+    # thread the map function that executes the scanner.
+    with futures.ThreadPoolExecutor(max_workers=arguments.process_threads) as executor:
+        results = [*executor.map(scan_ip, ip_list)]  # get the results from map and unpack them into a list.
+        hosts = [x for x in results if x is not None]  # remove the empty results.
+        return hosts  # return our found hosts to the process pool
 
 # permission verification and simple argument verification.
+
 
 if not is_admin():
     # the program needs to run as administrator to create the ARP packages.
@@ -56,7 +79,7 @@ if arguments.subnets > 3:
     sys.exit(2)
 # target verification
 
-ip = ""  # the place where the ip is going to be stored at the end of the verification.
+host_ip = ""  # the place where the ip is going to be stored at the end of the verification.
 # if an ip is going to be fed, validate the ip. But if an interface name is going to be fed, validate the interface.
 if arguments.use_ip:
     # check if any octet(fragment) of the ip is higher than 255, if it is, the ip cant be valid and it will exit.
@@ -74,7 +97,7 @@ if arguments.use_ip:
 else:
     # checks if it can fetch the ip from the interface name, if it cant, then its invalid.
     try:
-        ip = netifaces.ifaddresses(arguments.target)[netifaces.AF_INET][0]["addr"]
+        host_ip = netifaces.ifaddresses(arguments.target)[netifaces.AF_INET][0]["addr"]
     # if netifaces cant find the network interface, we will try to check the ip for none, it will throw a ValueError.
     except ValueError:
         print("[-]ERROR: The provided network interface isn't valid!")
@@ -83,7 +106,7 @@ else:
 # ip template generation, we are going to feed it to the scanning section where we will generate all its variations.
 
 # we need to find the dot index, we reverse the ip and find the first one's, which will be the last.
-reversedIp = [*reversed(ip)]
+reversedIp = [*reversed(host_ip)]
 octetsToDelete = arguments.subnets  # how many octets we want to delete.
 # we repeat the octet deleting process how many times we need to.
 for x in range(octetsToDelete):
@@ -92,3 +115,25 @@ for x in range(octetsToDelete):
     reversedIp = reversedIp[sliceEndPosition + 1:]  # plus one because we want to remove the dot too.
 # we convert our reversed list to a normal string and add a dot at the end.
 ipTemplate = "".join(map(str, reversed(reversedIp))) + "."
+
+
+# ip generation
+# tuple of strings containing all the possible octets of the ip
+combinations_tuples = tuple(itertools.product(map(str, range(256)), repeat=arguments.subnets))
+# generate a list of all the possible ip's using combinations_tuple and ipTemplates with generate_ip.
+ip_combinations = [*map(generate_ip, combinations_tuples)]
+# split all the ip's for the processes
+ip_split = []  # list where we are gonna store all the split ip's
+for x in range(0, len(ip_combinations), 256):  # i want every process to scan 256 ip's, that's the step of 256.
+    # even if x + 256 got out of range, python will just omit those illegal index's
+    ip_split.append(ip_combinations[x:x + 256])
+
+# scanning
+
+activeHosts = []  # empty list where we throw our results.
+
+# the process spawning pool
+with multiprocessing.Pool(arguments.process_num) as executor:
+    # run our scanner process using map
+    results = executor.map(scanner_process, ip_split)
+    print([*results])
