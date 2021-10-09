@@ -1,3 +1,4 @@
+#!virtualenv/bin/python3
 from scapy.layers.l2 import arping  # arping is the base for the scan.
 import netifaces  # a good library for getting the ip from an interface.
 import argparse  # argparse will be used for parsing the arguments.
@@ -20,6 +21,8 @@ argumentParser.add_argument("--process_threads", metavar="process_threads", type
                             help="how many threads run in each processs, defaults to 256")
 argumentParser.add_argument("--process_num", metavar="process_number", type=int, default=20,
                             help="how many process run, defaults to 20")
+argumentParser.add_argument("--output", metavar="filename", type=str, default=None,
+                            help="where to save the output, wont save if not specified")
 argumentParser.add_argument("--subnets", metavar="levels", help="how many subnet levels scan, defaults to one",
                             default=1, type=int)
 
@@ -130,10 +133,21 @@ for x in range(0, len(ip_combinations), 256):  # i want every process to scan 25
 
 # scanning
 
-activeHosts = []  # empty list where we throw our results.
-
 # the process spawning pool
 with multiprocessing.Pool(arguments.process_num) as executor:
-    # run our scanner process using map
-    results = executor.map(scanner_process, ip_split)
-    print([*results])
+    results = executor.map(scanner_process, ip_split)  # run our scanner process using map.
+    activeHosts = [x for x in [*results] if results is not []]  # remove our null returns.
+    activeHosts = [y for x in activeHosts for y in x]  # merge our sublists into one list.
+
+
+# output
+outStr = ""  # the place were we are gonna dump the list into a string.
+for x in activeHosts:
+    outStr += x + "\n"  # append the ip plus a newline.
+
+print(outStr)
+
+if arguments.output is not None:  # check if we should write the output to a file.
+    fileToWrite = open(arguments.output, "w")
+    fileToWrite.write(outStr)
+    fileToWrite.close()
