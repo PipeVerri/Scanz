@@ -95,7 +95,7 @@ if arguments.use_ip:
     except ValueError:
         print("[-]ERROR: The ip contains characters into it!")
         sys.exit(2)
-
+    host_ip = arguments.ip  # after the verifications set the host ip to the target
 else:
     # checks if it can fetch the ip from the interface name, if it cant, then its invalid.
     try:
