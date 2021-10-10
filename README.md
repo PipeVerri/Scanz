@@ -23,7 +23,7 @@ And Scanz, in the other hand, is a better option when:
 ---
 ---
 > # _Installation:_
-Download the correct release for your OS and just run the executable
+Download the correct release for your OS from the releases tab and just run the executable
 
 ```bash
 ./scanz
