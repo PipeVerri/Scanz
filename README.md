@@ -22,8 +22,8 @@ And Scanz, in the other hand, is a better option when:
 
 ---
 ---
-> # _Installation:_
-Download the correct release for your OS from the releases tab and just run the executable
+> # __Installation:__
+Download the correct release for your OS from the releases tab (to the right of the files) and just run the executable
 
 ```bash
 ./scanz
