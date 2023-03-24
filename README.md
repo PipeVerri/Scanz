@@ -5,7 +5,7 @@ _a couple days ago, I have decided to scan my school network, i had to wait a re
 
 That was the problem that started this project, my idea was to create a fast network discovery tool with the ability to do it fast and with just one command, and thats what i managed to make.
 
-Now, you're probably thinking: __and why the fuck should i use this when i have nmap?__.
+Now, you're probably thinking: __and why should i use this when i have nmap?__.
 
 Well, nmap is a great tool for port scanning and extensive enumeration, but speed and host discovery aren't it's main points.
 
