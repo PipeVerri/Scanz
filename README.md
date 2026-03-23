@@ -1,9 +1,6 @@
 > # __A fast, quick, and easy to use network scanner__
 
-_a couple days ago, I have decided to scan my school network, i had to wait a really long time for nmap to finish and also it didnt even discover hosts that blocked IMCP, mission failed._
-
-
-That was the problem that started this project, my idea was to create a fast network discovery tool with the ability to do it fast and with just one command, and thats what i managed to make.
+My idea is to create a fast network discovery tool with the ability to do it *really* fast and with just one command, and thats what i managed to make.
 
 Now, you're probably thinking: __and why should i use this when i have nmap?__.
 
@@ -87,8 +84,4 @@ Lets go trough some arguments and explain exactly what it does:
 
 > # __Future development__
 
-This started as a side project and not something to actively maintain, i just made a pretty useful tool and i wanted to share it with the world and maybe help a couple people._I will try to work as hard as i can to fix the bugs you find and add the promised features, i never hosted a public git project as big as this before_. Im not gonna <!-- give you up, never gonna let you down --> be able to be online for a couple weeks as my school final exams are coming.
-
-I would love to hear your feedback at fva#1693 on discord, just send me a friend request and i will probably accept it!
-
-WOW. did you read all the way down here? well, congrats! I leaved some fun stuff hidden on the raw markdown, bye!
+Educational project. Archived.
